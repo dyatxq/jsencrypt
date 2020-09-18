@@ -81,7 +81,75 @@ export default class JSEncrypt {
     public decrypt(str:string) {
         // Return the decrypted string.
         try {
-            return this.getKey().decrypt(b64tohex(str));
+            return this.decryptB64ByPrivateKey(str);
+        } catch (ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the private
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str base64 encoded crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    public decryptB64ByPrivateKey(str:string) {
+        // Return the decrypted string.
+        try {
+            return this.decryptHexByPrivateKey(b64tohex(str));
+        } catch (ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the private
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str Hex crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    public decryptHexByPrivateKey(str:string) {
+        // Return the decrypted string.
+        try {
+            return this.getKey().decryptByPrivateKey(str);
+        } catch (ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the public
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str base64 encoded crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    public decryptB64ByPublicKey(str:string) {
+        // Return the decrypted string.
+        try {
+            return this.decryptHexByPublicKey(b64tohex(str));
+        } catch (ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the public
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str Hex crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    public decryptHexByPublicKey(str:string) {
+        // Return the decrypted string.
+        try {
+            return this.getKey().decryptByPublicKey(str);
         } catch (ex) {
             return false;
         }

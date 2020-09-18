@@ -3017,13 +3017,24 @@ var RSAKey = /** @class */ (function () {
     // RSAKey.prototype.decrypt = RSADecrypt;
     // Return the PKCS#1 RSA decryption of "ctext".
     // "ctext" is an even-length hex string and the output is a plain string.
-    RSAKey.prototype.decrypt = function (ctext) {
+    RSAKey.prototype.decryptByPrivateKey = function (ctext) {
         var c = parseBigInt(ctext, 16);
         var m = this.doPrivate(c);
         if (m == null) {
             return null;
         }
         return pkcs1unpad2(m, (this.n.bitLength() + 7) >> 3);
+    };
+    // RSAKey.prototype.decrypt = RSADecrypt;
+    // Return the PKCS#1 RSA decryption of "ctext".
+    // "ctext" is an even-length hex string and the output is a plain string.
+    RSAKey.prototype.decryptByPublicKey = function (ctext) {
+        var c = parseBigInt(ctext, 16);
+        var m = this.doPublic(c);
+        if (m == null) {
+            return null;
+        }
+        return pkcs1unpad2ForPublicKeyDecryption(m, (this.n.bitLength() + 7) >> 3);
     };
     // Generate a new random private key B bits long, using public expt E
     RSAKey.prototype.generateAsync = function (B, E, callback) {
@@ -3127,6 +3138,39 @@ function pkcs1unpad2(d, n) {
     if (b.length - i != n - 1 || b[i] != 2) {
         return null;
     }
+    ++i;
+    while (b[i] != 0) {
+        if (++i >= b.length) {
+            return null;
+        }
+    }
+    var ret = "";
+    while (++i < b.length) {
+        var c = b[i] & 255;
+        if (c < 128) { // utf-8 decode
+            ret += String.fromCharCode(c);
+        }
+        else if ((c > 191) && (c < 224)) {
+            ret += String.fromCharCode(((c & 31) << 6) | (b[i + 1] & 63));
+            ++i;
+        }
+        else {
+            ret += String.fromCharCode(((c & 15) << 12) | ((b[i + 1] & 63) << 6) | (b[i + 2] & 63));
+            i += 2;
+        }
+    }
+    return ret;
+}
+// Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
+function pkcs1unpad2ForPublicKeyDecryption(d, n) {
+    var b = d.toByteArray();
+    var i = 0;
+    while (i < b.length && b[i] == 0) {
+        ++i;
+    }
+    // if (b.length - i != n - 1 || b[i] != 2) {
+    //     return null;
+    // }
     ++i;
     while (b[i] != 0) {
         if (++i >= b.length) {
@@ -5237,12 +5281,75 @@ var JSEncrypt = /** @class */ (function () {
     JSEncrypt.prototype.decrypt = function (str) {
         // Return the decrypted string.
         try {
-            return this.getKey().decrypt(b64tohex(str));
-        }
-        catch (ex) {
+            return this.decryptB64ByPrivateKey(str);
+        } catch (ex) {
             return false;
         }
-    };
+    }
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the private
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str base64 encoded crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    JSEncrypt.prototype.decryptB64ByPrivateKey = function (str) {
+        // Return the decrypted string.
+        try {
+            return this.decryptHexByPrivateKey(b64tohex(str));
+        } catch (ex) {
+            return false;
+        }
+    }
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the private
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str Hex crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    JSEncrypt.prototype.decryptHexByPrivateKey = function (str) {
+        // Return the decrypted string.
+        try {
+            return this.getKey().decryptByPrivateKey(str);
+        } catch (ex) {
+            return false;
+        }
+    }
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the public
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str base64 encoded crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    JSEncrypt.prototype.decryptB64ByPublicKey = function (str) {
+        // Return the decrypted string.
+        try {
+            return this.decryptHexByPublicKey(b64tohex(str));
+        } catch (ex) {
+            return false;
+        }
+    }
+    /**
+     * Proxy method for RSAKey object's decrypt, decrypt the string using the public
+     * components of the rsa key object. Note that if the object was not set will be created
+     * on the fly (by the getKey method) using the parameters passed in the JSEncrypt constructor
+     * @param {string} str Hex crypted string to decrypt
+     * @return {string} the decrypted string
+     * @public
+     */
+    JSEncrypt.prototype.decryptHexByPublicKey = function (str) {
+        // Return the decrypted string.
+        try {
+            return this.getKey().decryptByPublicKey(str);
+        } catch (ex) {
+            return false;
+        }
+    }
     /**
      * Proxy method for RSAKey object's encrypt, encrypt the string using the public
      * components of the rsa key object. Note that if the object was not set will be created
